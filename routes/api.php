@@ -26,13 +26,14 @@ Route::get('/email/verify/{id}/{hash}', [AuthController::class, 'verifyEmail'])-
 Route::post('/email/verification-notification', [AuthController::class, 'resendVerification'])->middleware('throttle:6,1');
 
 // Protected Routes (Require Authentication)
-Route::middleware(['auth:sanctum'])->group(function () {
+Route::middleware(['auth:sanctum', \App\Http\Middleware\TrackPresence::class])->group(function () {
 
     // Auth User Routes
     Route::get('/admin/registrations/pending', [AuthController::class, 'pendingRegistrations']);
     Route::post('/admin/registrations/{id}/review', [AuthController::class, 'reviewRegistration']);
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    Route::get('/presence', [\App\Http\Controllers\API\PresenceController::class, 'index']);
     Route::post('/profile/photo', [AuthController::class, 'uploadProfilePhoto']);
     Route::patch('/profile', [AuthController::class, 'updateProfile']);
 

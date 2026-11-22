@@ -383,7 +383,7 @@ class AuthController extends Controller
     {
         $user = $request->user();
         if ($user) {
-            $user->status = 'inactive';
+            $user->status = 'inactive'; try { \Illuminate\Support\Facades\Cache::forget('user-online:' . $user->id); } catch (\Throwable $e) {}
             $user->save();
             if (strtolower((string) $user->role) === 'employee') {
                 Employees::where('user_id', $user->id)->update(['status' => 'inactive']);

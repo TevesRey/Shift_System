@@ -746,11 +746,17 @@ function initials(name) {
         .toUpperCase();
 }
 
-function person(name, sub = "", photo = "") {
+function person(name, sub = "", photo = "", online = null) {
     const avatar = photo
         ? `<img class="person-avatar" src="${esc(photoUrl(photo))}" alt="" loading="lazy">`
         : `<span class="person-avatar">${esc(initials(name))}</span>`;
-    return `<div class="person-cell">${avatar}<span><b>${esc(name)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}</span></div>`;
+    const tag = online === null ? "" : `<em class="presence-tag ${online ? "on" : "off"}">${online ? "Online" : "Offline"}</em>`;
+    return `<div class="person-cell">${avatar}<span><b>${esc(name)}</b>${sub ? `<small>${esc(sub)}</small>` : ""}${tag}</span></div>`;
+}
+// Online/offline label. Only administrators load /presence, so everyone else gets null (no label).
+function onlineFor(userId) {
+    if (!Array.isArray(state.presence)) return null;
+    return state.presence.map(String).includes(String(userId));
 }
 function emptyRow(cols, message = "No records found.") {
     return `<tr><td class="empty-cell" colspan="${cols}">${esc(message)}</td></tr>`;
@@ -831,7 +837,7 @@ function renderDashboard() {
         ? recent
             .map(
                 (s) =>
-                    `<tr><td>${person(s.user && fullName(s.user) !== "Unassigned" ? fullName(s.user) : employeeNameFor(s.user_id), s.user?.email || "", s.user?.profile_photo_path || photoFor({ userId: s.user_id }))}</td><td>${esc(shiftNameFor(s))}</td><td>${dateText(s.work_date)}</td><td>${statusPill(s.status || "active")}</td></tr>`,
+                    `<tr><td>${person(s.user && fullName(s.user) !== "Unassigned" ? fullName(s.user) : employeeNameFor(s.user_id), s.user?.email || "", s.user?.profile_photo_path || photoFor({ userId: s.user_id }), onlineFor(s.user_id))}</td><td>${esc(shiftNameFor(s))}</td><td>${dateText(s.work_date)}</td><td>${statusPill(s.status || "active")}</td></tr>`,
             )
             .join("")
         : emptyRow(
@@ -867,7 +873,7 @@ function renderEmployees() {
                 const action = positionIsSet
                     ? `<span class="position-locked-note">Cannot edit</span>`
                     : `<button class="small-action" data-edit="employee" data-id="${esc(x.id)}">Set position</button>`;
-                return `<tr><td>${person(fullName(x), x.user?.email || "", x.user?.profile_photo_path)}</td><td>${esc(x.employee_number || "—")}</td><td>${statusPill(x.user?.role || "employee")}</td><td>${positionCell}</td><td><div class="row-actions">${action}</div></td></tr>`;
+                return `<tr><td>${person(fullName(x), x.user?.email || "", x.user?.profile_photo_path, onlineFor(x.user_id || x.user?.id))}</td><td>${esc(x.employee_number || "—")}</td><td>${statusPill(x.user?.role || "employee")}</td><td>${positionCell}</td><td><div class="row-actions">${action}</div></td></tr>`;
             })
             .join("")
         : emptyRow(5, "No matching employees.");
@@ -1495,7 +1501,7 @@ async function loadAll() {
         ? [
             ["employees", "/employees"],
             ["schedules", "/schedules"],
-            ["shifts", "/shifts"],
+            ["shifts", "/shifts"], ["presence", "/presence"],
             ["requests", "/rest-day-requests"],
             ["absences", "/absence-requests"],
             ["restDayAssignments", "/rest-day-assignments"],
@@ -2844,6 +2850,20 @@ document.addEventListener("click", (e) => {
     }
 });
 setInterval(() => refreshNotifications(false), 15000);
+// Admin: refresh who is online every 20 seconds without reloading everything.
+setInterval(async () => {
+    if (!state.token || !Array.isArray(state.presence)) return;
+    try {
+        const data = await api("/presence");
+        const next = Array.isArray(data) ? data : data?.data || [];
+        if (JSON.stringify(next) !== JSON.stringify(state.presence)) {
+            state.presence = next;
+            renderAll();
+        }
+    } catch (e) {
+        console.warn("Presence could not refresh:", e.message);
+    }
+}, 20000);
 
 (async function init() {
     try {
