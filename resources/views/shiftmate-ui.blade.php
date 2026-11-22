@@ -834,7 +834,7 @@
                     window.setTimeout(function() {
                         splash?.remove();
                     }, 220);
-                }, 350);
+                }, 4000);
             })();
         </script>
         <script src="{{ asset('shiftmate-ui-assets/app.js') . '?v=20261122-5' }}"></script>
