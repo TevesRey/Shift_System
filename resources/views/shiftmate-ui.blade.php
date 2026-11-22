@@ -5,6 +5,9 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>ShiftMate System</title>
+    <link rel="icon" type="image/png" href="/Logo.png?v=2">
+    <link rel="shortcut icon" href="/Logo.png?v=2">
+    <link rel="apple-touch-icon" href="/icon-192.png">
     <meta name="description" content="SHIFTMATE helps administrators assign employee shifts and lets employees view schedules and submit schedule-related requests.">
     <meta name="theme-color" content="#10172d">
     <meta name="color-scheme" content="light dark">
