@@ -3549,3 +3549,18 @@ video {
   appearance: none;
   -webkit-tap-highlight-color: transparent;
 }
+
+/* Remove focus box on Show/Hide password button */
+.toggle-password,
+.toggle-password:hover,
+.toggle-password:focus,
+.toggle-password:focus-visible,
+.toggle-password:active {
+  outline: none !important;
+  box-shadow: none !important;
+  background: none !important;
+  filter: none !important;
+  -webkit-appearance: none;
+  appearance: none;
+  -webkit-tap-highlight-color: transparent;
+}
