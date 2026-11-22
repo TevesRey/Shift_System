@@ -11,7 +11,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Geist:wght@400..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-2' }}">
+    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-3' }}">
     <style>.landing-mobile-intro{display:none}</style>
     <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/mobile-fix.css') . '?v=20261122-12' }}">
 </head>
