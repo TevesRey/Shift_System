@@ -837,7 +837,7 @@
                 }, 4000);
             })();
         </script>
-        <script src="{{ asset('shiftmate-ui-assets/app.js') . '?v=20261122-5' }}"></script>
+        <script src="{{ asset('shiftmate-ui-assets/app.js') . '?v=20261122-6' }}"></script>
 </body>
 
 </html>
