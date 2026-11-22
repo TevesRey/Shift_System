@@ -1,7 +1,7 @@
 FROM dunglas/frankenphp:1-php8.4-bookworm AS base
 
 RUN cp "$PHP_INI_DIR/php.ini-production" "$PHP_INI_DIR/php.ini" \
-    && install-php-extensions pdo_mysql intl zip opcache \
+    && install-php-extensions pdo_mysql intl zip opcache gd\
     && { \
         echo "upload_max_filesize=5M"; \
         echo "post_max_size=8M"; \
