@@ -14,7 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Geist:wght@400..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-3' }}">
+    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-4' }}">
     <style>.landing-mobile-intro{display:none}</style>
     <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/mobile-fix.css') . '?v=20261122-12' }}">
 </head>
@@ -25,7 +25,13 @@
     <div id="splashScreen" class="splash-screen" aria-label="Loading ShiftMate">
         <img src="/Logo.png" alt="ShiftMate logo" class="splash-logo" />
 
+        <div class="splash-text">
+            <p class="splash-welcome">Welcome to</p>
+            <h1 class="splash-title">Shift<span>Mate</span></h1>
+            <p class="splash-tagline">Your schedule, simplified.</p>
+        </div>
         <div class="splash-screen-progress" aria-hidden="true"><span></span></div>
+        <p class="splash-loading" aria-hidden="true">Loading...</p>
     </div>
 
     <div id="landingView" class="landing-page">
