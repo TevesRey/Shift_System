@@ -826,7 +826,7 @@ function renderDashboard() {
     );
     const recent = (
         futureSchedules.length ? futureSchedules : orderedSchedules
-    ).slice(0, 6);
+    ).slice(0, 50);
     $("#dashboardScheduleRows").innerHTML = recent.length
         ? recent
             .map(
