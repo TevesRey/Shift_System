@@ -483,7 +483,7 @@ function showAuth(register = false) {
     $("#loginForm").classList.toggle("hidden", register);
     $("#registerForm").classList.toggle("hidden", !register);
     $("#forgotPasswordForm")?.classList.add("hidden");
-    $("#resetPasswordForm")?.classList.add("hidden");
+    $("#resetPasswordForm")?.classList.add("hidden"); $("#verifyCodeForm")?.classList.add("hidden");
     const portalSwitch = $(".portal-switch");
     if (portalSwitch) portalSwitch.classList.toggle("hidden", true);
     const signupNote = $("#employeeSignupNote");
@@ -2210,7 +2210,7 @@ $("#resetBackToLogin")?.addEventListener("click", () => {
     history.replaceState({}, "", location.pathname);
     showAuth(false);
 });
-$("#forgotPasswordForm")?.addEventListener("submit", async (event) => {
+$("#forgotPasswordFormLegacy")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     setAuthError("");
     const btn = $('button[type="submit"]', event.currentTarget);
@@ -2891,4 +2891,105 @@ document.addEventListener("click", (event) => {
         showing ? "Hide password" : "Show password",
     );
     toggle.setAttribute("aria-pressed", String(showing));
+});
+
+/* ---- Password reset with a 6-digit code sent to the user's email ---- */
+let resetCodeEmail = "";
+function showResetStep(formSelector) {
+    ["#loginForm", "#registerForm", "#forgotPasswordForm", "#verifyCodeForm", "#resetPasswordForm"].forEach((s) =>
+        $(s)?.classList.add("hidden"),
+    );
+    $(formSelector)?.classList.remove("hidden");
+    $(".portal-switch")?.classList.add("hidden");
+}
+$("#forgotPasswordForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setAuthError("");
+    const btn = $('button[type="submit"]', event.currentTarget);
+    btn.disabled = true;
+    try {
+        const values = Object.fromEntries(new FormData(event.currentTarget));
+        const data = await api("/forgot-password", {
+            method: "POST",
+            body: JSON.stringify(values),
+            quiet: true,
+        });
+        resetCodeEmail = String(values.email || "").trim().toLowerCase();
+        showResetStep("#verifyCodeForm");
+        $("#authTitle").textContent = "Enter verification code";
+        $("#authSubtitle").textContent =
+            `We sent a 6-digit code to ${resetCodeEmail}. It expires in 10 minutes.`;
+        $('#verifyCodeForm input[name="code"]')?.focus();
+        toast(data?.message || "Verification code sent.");
+    } catch (error) {
+        setAuthError(error.message);
+    } finally {
+        btn.disabled = false;
+    }
+});
+$("#verifyCodeForm")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    setAuthError("");
+    const form = event.currentTarget;
+    const btn = $('button[type="submit"]', form);
+    btn.disabled = true;
+    try {
+        const code = String(new FormData(form).get("code") || "").replace(/\D/g, "");
+        const data = await api("/verify-reset-code", {
+            method: "POST",
+            body: JSON.stringify({ email: resetCodeEmail, code }),
+            quiet: true,
+        });
+        history.replaceState(
+            {},
+            "",
+            `${location.pathname}?token=${encodeURIComponent(data.reset_token)}&email=${encodeURIComponent(data.email || resetCodeEmail)}`,
+        );
+        form.reset();
+        showResetStep("#resetPasswordForm");
+        $("#authTitle").textContent = "Choose a new password";
+        $("#authSubtitle").textContent =
+            "Code verified. Enter and confirm your new password.";
+    } catch (error) {
+        setAuthError(error.message);
+    } finally {
+        btn.disabled = false;
+    }
+});
+$("#resendResetCode")?.addEventListener("click", async () => {
+    setAuthError("");
+    try {
+        const data = await api("/forgot-password", {
+            method: "POST",
+            body: JSON.stringify({ email: resetCodeEmail }),
+            quiet: true,
+        });
+        toast(data?.message || "A new code was sent.");
+    } catch (error) {
+        setAuthError(error.message);
+    }
+});
+$("#verifyBackToLogin")?.addEventListener("click", () => {
+    resetCodeEmail = "";
+    history.replaceState({}, "", location.pathname);
+    showAuth(false);
+});
+// A reset link opened from an old email (/?token=...&email=...) must land on the reset form,
+// not on the landing page.
+document.addEventListener("DOMContentLoaded", () => {
+    const q = new URLSearchParams(location.search);
+    if (!q.has("token") || !q.has("email")) return;
+    const landing = document.getElementById("landingView");
+    const authView = document.getElementById("authView");
+    if (!landing || !authView) return;
+    landing.style.display = "contents";
+    landing.classList.remove("hidden");
+    landing.querySelector(".landing-shade")?.classList.add("portal-view-hidden");
+    landing.querySelector(".landing-hero")?.classList.add("portal-view-hidden");
+    authView.classList.remove("hidden");
+    authView.style.display = "flex";
+    document.getElementById("appView")?.classList.add("hidden");
+    showResetStep("#resetPasswordForm");
+    $("#authTitle").textContent = "Choose a new password";
+    $("#authSubtitle").textContent = "Create a strong password for your account.";
 });

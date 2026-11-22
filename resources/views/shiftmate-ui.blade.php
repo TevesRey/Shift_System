@@ -136,8 +136,13 @@
                         <form id="forgotPasswordForm" class="hidden">
                             <p class="form-note"></p>
                             <label>Email address<input name="email" type="email" required autocomplete="email" placeholder="Enter your login email"></label>
-                            <button class="btn primary wide" type="submit">Continue to reset password →</button>
+                            <button class="btn primary wide" type="submit">Send verification code →</button>
                             <p class="form-note"><button class="text-button" type="button" id="backToLogin">Back to Log in</button></p>
+                        </form>
+                        <form id="verifyCodeForm" class="hidden">
+                            <label>Verification code<input name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required autocomplete="one-time-code" placeholder="6-digit code"></label>
+                            <button class="btn primary wide" type="submit">Verify code →</button>
+                            <p class="form-note"><button class="text-button" type="button" id="resendResetCode">Resend code</button> · <button class="text-button" type="button" id="verifyBackToLogin">Back to Log in</button></p>
                         </form>
                         <form id="resetPasswordForm" class="hidden">
                             <label>New password<div class="password-field-wrap"><input name="password" type="password" required minlength="8" autocomplete="new-password"><button type="button" class="toggle-password" aria-label="Show password" aria-pressed="false">Show</button></div></label>
@@ -832,7 +837,7 @@
                 }, 350);
             })();
         </script>
-        <script src="{{ asset('shiftmate-ui-assets/app.js') . '?v=20261122-3' }}"></script>
+        <script src="{{ asset('shiftmate-ui-assets/app.js') . '?v=20261122-5' }}"></script>
 </body>
 
 </html>
