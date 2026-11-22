@@ -1,43 +1,49 @@
-/* ShiftMate mobile fix — landing page.
-   Load AFTER modern-2026.css. Desktop is untouched: everything below the
-   intro rule only applies at 900px and narrower. */
+/* ShiftMate mobile fix - landing page. Load AFTER modern-2026.css.
+   The mobile layout applies when the screen is narrow OR when the device is
+   a phone (touch screen with a small physical screen), even if the browser
+   forces a wide "desktop site" viewport. */
 
 .landing-mobile-intro { display: none; }
 
-@media (max-width: 900px) {
+@media (max-width: 900px), (pointer: coarse) and (max-device-width: 900px) {
   html, body { overflow-x: hidden; }
 
-  /* The desktop poster (loginsignup.png) has its text baked into a 16:9 image,
-     so on a tall phone screen it gets cropped to a few giant letters.
-     Replace it with a plain soft background; the intro text is real HTML below. */
   .landing-page {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    min-height: 100vh;
     min-height: 100dvh;
     overflow: hidden;
+    /* Same office photo as the desktop site. The poster text sits on the left
+       of the picture, so on a tall phone we show its right side and put the
+       real title and buttons on top of a light wash. */
     background:
-      radial-gradient(120% 60% at 100% 0%, rgba(65, 105, 225, .22), transparent 60%),
-      linear-gradient(180deg, #f3f7ff 0%, #e6eeff 100%);
+      linear-gradient(180deg, rgba(255, 255, 255, .80) 0%, rgba(243, 248, 255, .55) 50%, rgba(226, 237, 255, .80) 100%),
+      url("/loginsignup.png") right center / cover no-repeat !important;
   }
 
   .landing-hero {
-    display: flex;
-    flex-direction: column;
-    align-items: stretch;
+    flex: 0 0 auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: stretch !important;
     gap: 28px;
-    padding: max(24px, env(safe-area-inset-top)) 18px max(32px, env(safe-area-inset-bottom));
+    width: 100% !important;
+    max-width: 480px !important;
+    margin: 0 auto !important;
+    padding: 24px 18px !important;
   }
 
-  .landing-copy { width: 100%; }
+  .landing-copy { width: 100% !important; }
 
   .landing-mobile-intro {
     display: block;
     text-align: center;
     margin-bottom: 24px;
   }
-  .landing-mobile-intro img {
-    width: 76px;
-    height: 76px;
-    object-fit: contain;
-  }
+  .landing-mobile-intro img { width: 56px; height: 56px; object-fit: contain; }
   .landing-mobile-intro h1 {
     margin: 10px 0 6px;
     font: 700 clamp(34px, 11vw, 46px)/1 var(--font-display);
@@ -59,45 +65,28 @@
     color: #46506f;
   }
 
-  /* Desktop pushes these buttons down with margin-top:64vh and a 10px height. */
   .portal-choice-group {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
     gap: 12px;
-    max-width: none;
-    margin-top: 0;
-    height: auto;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 auto !important;
+    height: auto !important;
   }
   .portal-entry {
     grid-template-columns: 44px minmax(0, 1fr) 30px;
     gap: 12px;
     padding: 14px;
     color: #fff;
+    text-align: left;
   }
   .portal-entry .portal-entry-icon,
   .portal-entry .portal-entry-arrow { background: rgba(255, 255, 255, .18); }
   .portal-entry .portal-entry-copy small { color: rgba(255, 255, 255, .82); }
   .portal-entry-icon { width: 44px; height: 44px; }
 
-  /* Schedule preview: sits under the buttons, never over them. */
-  .landing-visual {
-    min-height: 0;
-    display: block;
-    width: 100%;
-    padding: 0 0 8px;
-  }
-  .orbit, .orbit-one, .orbit-two { display: none; }
-  .float-card-back { display: none; }
-  .schedule-preview {
-    width: 100%;
-    padding: 16px;
-    border-radius: 22px;
-  }
-  .preview-person small { white-space: normal; }
-  .float-stat { display: none; }
+  .landing-visual,
+  .orbit, .orbit-one, .orbit-two,
+  .float-card-back,
+  .float-stat { display: none !important; }
 }
-
-@media (max-width: 380px) {
-  .landing-hero { padding-left: 14px; padding-right: 14px; }
-  .schedule-preview { padding: 14px; }
-}@media (max-width: 900px) { .landing-visual { display: none; } .landing-hero { justify-content: center; } .landing-mobile-intro img { width: 56px; height: 56px; } }
-@media (max-width: 900px) { .landing-page { min-height: 100vh; min-height: 100dvh; } .landing-hero { flex: 1; } html, body { min-height: 100%; } }
