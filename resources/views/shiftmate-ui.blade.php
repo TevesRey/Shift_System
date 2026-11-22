@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>ShiftMate System</title>
     <meta name="description" content="SHIFTMATE helps administrators assign employee shifts and lets employees view schedules and submit schedule-related requests.">
     <meta name="theme-color" content="#10172d">
@@ -13,7 +13,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Geist:wght@400..700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-2' }}">
     <style>.landing-mobile-intro{display:none}</style>
-    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/mobile-fix.css') . '?v=20261122-7' }}">
+    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/mobile-fix.css') . '?v=20261122-8' }}">
 </head>
 
 <body>
