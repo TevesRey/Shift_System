@@ -2881,3 +2881,56 @@ img.person-avatar {
     object-fit: cover;
     background: transparent;
 }
+
+/* =====================================================================
+   MOBILE SAFETY NET - stops layouts from spilling sideways on phones
+   ===================================================================== */
+html, body { max-width: 100%; overflow-x: hidden; }
+img, svg, video { max-width: 100%; }
+
+.main-area, .page-wrap, .panel, .dashboard-grid > *, .right-column > * { min-width: 0; }
+
+@media (max-width: 760px) {
+  .page-wrap { padding: 16px 14px; }
+  .topbar { padding-left: 14px; padding-right: 14px; gap: 10px; }
+  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .dashboard-grid, .right-column, .employee-dashboard-lower { grid-template-columns: 1fr; }
+  .table-scroll, .schedule-calendar-scroll, .panel { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .modal, .logout-modal, .profile-modal { width: calc(100vw - 24px); max-width: 100%; }
+}
+
+@media (max-width: 420px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  .page-heading h1 { font-size: 22px; }
+}
+
+/* =====================================================================
+   MOBILE - main page (landing, login and signup)
+   ===================================================================== */
+@media (max-width: 760px) {
+  .landing-page { background-position: center top; }
+  .landing-hero {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 20px 16px 32px;
+    gap: 24px;
+  }
+  /* The buttons were pushed down with a desktop-sized margin and a fixed
+     10px height, which made them overlap the preview. */
+  .portal-choice-group {
+    grid-template-columns: 1fr;
+    margin-top: 45vh;
+    height: auto;
+    max-width: 100%;
+    border-radius: 0;
+  }
+  .portal-entry { padding: 12px; }
+  .landing-title { font-size: clamp(34px, 11vw, 48px); margin: 20px 0 12px; }
+  /* Decorative preview only - hidden so it cannot spill over the buttons. */
+  .landing-visual { display: none; }
+
+  .auth-shell { padding: 14px; align-items: flex-start; }
+  .auth-panel { width: 100%; margin: 0 auto; padding: 24px 18px; border-radius: 22px; }
+  .auth-top, .auth-form { min-width: 0; }
+  .auth-form input, .auth-form select, .auth-form .btn { width: 100%; max-width: 100%; }
+  .modal-fields { grid-template-columns: 1fr; }
+}

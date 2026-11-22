@@ -1,0 +1,1371 @@
+diff --git a/app/Http/Controllers/API/AuthController.php b/app/Http/Controllers/API/AuthController.php
+index 068a1a3..11a2ae9 100644
+--- a/app/Http/Controllers/API/AuthController.php
++++ b/app/Http/Controllers/API/AuthController.php
+@@ -459,44 +459,47 @@ public function updateProfile(Request $request)
+         ]);
+     }
+ 
+-    /** Store the signed-in user's profile picture. */
++    /** Store the signed-in user's profile picture inside the database. */
+     public function uploadProfilePhoto(Request $request)
+     {
+         $request->validate([
+-            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
++            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+         ]);
+ 
+         $user = $request->user();
+ 
+-        // Local development uses Laravel's public disk. Production can set
+-        // FILESYSTEM_DISK=s3 so profile photos survive stateless Vercel instances.
+-        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
+-
+         try {
+-            $path = $request->file('photo')->storePublicly('profile-photos', $disk);
+-            if (! $path) {
+-                return response()->json(['message' => 'The profile photo could not be saved. Please try again.'], 500);
++            $source = @imagecreatefromstring(file_get_contents($request->file('photo')->getRealPath()));
++            if (! $source) {
++                return response()->json(['message' => 'The image could not be read.'], 422);
+             }
+ 
+-            $photoUrl = Storage::disk($disk)->url($path);
++            // Crop to a centered square, then shrink to 256x256.
++            $w = imagesx($source);
++            $h = imagesy($source);
++            $side = min($w, $h);
++            $x = (int) (($w - $side) / 2);
++            $y = (int) (($h - $side) / 2);
+ 
+-            // Delete older relative paths when possible. Absolute URLs may point
+-            // to a remote object store and are intentionally not guessed/rewritten.
+-            $oldPath = (string) $user->profile_photo_path;
+-            if ($oldPath !== '' && ! preg_match('/^https?:\/\//i', $oldPath)) {
+-                Storage::disk($disk)->delete($oldPath);
+-            }
++            $canvas = imagecreatetruecolor(256, 256);
++            imagefill($canvas, 0, 0, imagecolorallocate($canvas, 255, 255, 255));
++            imagecopyresampled($canvas, $source, 0, 0, $x, $y, 256, 256, $side, $side);
++
++            ob_start();
++            imagejpeg($canvas, null, 82);
++            $jpeg = ob_get_clean();
+ 
+-            $user->forceFill(['profile_photo_path' => $photoUrl])->save();
++            $user->forceFill([
++                'profile_photo_path' => 'data:image/jpeg;base64,' . base64_encode($jpeg),
++            ])->save();
+         } catch (\Throwable $exception) {
+             Log::error('ShiftMate profile photo upload failed.', [
+                 'user_id' => $user->id,
+-                'disk' => $disk,
+                 'exception' => $exception->getMessage(),
+             ]);
+ 
+             return response()->json([
+-                'message' => 'Profile photo storage is unavailable. Check the configured filesystem storage and try again.',
++                'message' => 'The profile photo could not be saved. Please try again.',
+             ], 500);
+         }
+ 
+diff --git a/public/icon-192.png b/public/icon-192.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..dc3b36700e1512ce3a72ed6d85f878e20039ca8f
+GIT binary patch
+literal 11768
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/public/icon-512.png b/public/icon-512.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..1832271779799a58005b32a17b3e471d28616bde
+GIT binary patch
+literal 49120
+zcmeEtg;yJ2v~_TIinc&Qkl+rbxCeqerMSBmf@|@jg%I4eXo2EdoYE3piWZ6#r^R{s
+zz3<QX-ps7btd&_=_nv$1K4<T95~ro1OoUH|4*&p&ASwzv0027b5gma0-z|_%{u2Pu
+zTLDp!)$`9idRPkB`I07#&m)Mj&!c!;?cKq93%-3|tm?gZ&=1_BeEA9weicnClXA=h
+zem@zjVp&!(fI|#WS(f<zboF%eWMzRmHXg!z{{gW7J9<d4F=$YSe+3QU|9+Kc#TOQi
+zI{f1M|M!ib;QxE!KSTYW9sWP@hs$mpzSAjL%BPTZ%OlH&-oFFyF)%Pf>9H}cal&v#
+z#~$+P{dz-nS6?1c?NvYBGSW|?Hq>itzOVv%%w^=+%GQ%}X?{-%?c(Fwr^v;>!oHyO
+ztz0D$|GvIHzX1z?wD7yA9Pu-{FH_WR_fc&RUPIwq$j6vJ7<0UGk8Q`(ttT637#Qnl
+zk!bg`e2c>vE}Ff5jGuIjs$1cb9o9j|xW~cHylx`wk9~drMo>Q|$_3ruiF%On4+Kj-
+zHr`PNwymjE1YInetyT~Rqed2J$rl!ieMD@D6F@MT^Wl<6Nsy24RM%n$jqu*#x@f=<
+z2m5i1hORF;p$50$#fRPe0@}|P+U8R*ngnd@M><06Q)Vm8TX)5G1|%m0<pl*;3O+Vy
+z!rDxaDP#@}D4cNr&<_Za(V`xQ#r`4mKT4)03vp{wQJ9^c+1p=E3blQ+!Jbt5-+S?!
+z7}u$uwuD8;PYZ&<q4=iSq0e=5LT|yug!h%G0g%K}tudzY>3jN9n?I3|y(d!I9m9L?
+zn)w?lb2Tk(GmL>DO^8|pvc?MECy?I>nVksk9m)nMlRlA>@{^5Px|y&6J_|PbC}jpe
+zi&^~qbU-YAcF*yrw&ujHlHuT%+D^#;P55r4sU<wT05cLTDAXn6MlIUX&W`mxY4bG>
+zkkt+dByI&bO@@i|keWs;i_tkR(r<|h4^7hP*FUu}5*oxwM$F_?XIFt$wRO24dqW>s
+zCgy17D%oziJzh_4B++DTu%VV@o$NJ#?#8gkEqc=^bN~Wkp&}#G7~ld<at%@PT6rmk
+z<3h3dObs0f2THs|GCg7^!gE{*`FyQTDA%hb0r29n>w_qBb^Vr%v`=D9c011+OnYp;
+zA{Z$8i<spu6HbT4o7x%^zJIz)tU0AXf%VCIXGkEkL%|?MR5n=M5dkU_Qg>8MQ_xWb
+zr;5>A;8O4lk_nPg7}k)G-3Q|Qs|C;tFDjL4tmgf8<^u?0%mRd||8bA@R5^{kvgdBE
+zZQt>IyD*^8@XV#Wx}e3%RWB9Sl8jXxs31*{_q(xka$$^3*=RPa>D{yli-l=)0V&Fo
+zj6(Yfw<HXItP8Xmvf+y5FvPB7K2k#SBBR`R*HINxo{{FE$~DQwMaXtFAbXe%um^m^
+zIV~r~OkGUW<$0>f1{#H7or(H>3|noru2!7VQ~Qyo_Kjt)s}A<|yy=wVCgP)f`1fB^
+zpb~HALJn2eb|uKZ=(b(gAN9_4{qvVHI}^|;Y?Z~zNBf`M80#<o8_}YYu_&xH(Cz0X
+zCBJu?V}3bOXd1cn^bP5wdLc0lo@xfAg7FCAzW9aRvvmEq)gpw$`$498*ioMrFL$Sj
+zHhWC|uI1E}W9tjH6g%-;JA;?JPy_NcUT86$5oa;WUAh*cZOw4`+rc0s{2Cr`<!}M*
+za$Le`sG)G%rR;`WzS-ap`;>)oi{-Z4cRL;OXXN8`HXlvjzldznuhk+?(*g1DSB<fy
+z;He9tg7O=of@!2<zD5NsA9dSxMA&8PAjo43!zy*L<bL8%P!I?<I%7{lk0O|u$w}F<
+z9i8|p9-Z)oeVJ370o4s#gfa=$)ppcR3%+?XO*V$g<bwSC;e*23O}oO*Kd6_&>KA-l
+z`}ib7rE2NCD${pXfaH^Z)mHz&uG{V`QA<dMGMHx9{p@Gpt31QZ=r|PxP$LMUi_k<0
+zsaGI_#5MQE0lP57o)AlRxe$xSBv9ivE;`zDk)(vgn<hLe0?kEZ)2T$jdugS+W3J!%
+z8@4G1pT3~t4?eW2yFl-6ob~C@xC#ZZr|RTDx)?^fBZu>t^Sr4lkJEddmZU;;2F<7`
+zGJf2tw*I`86UN+k0v<yafKWzYC$;~?g`&bF2s9@*eLV5(<!**p87NLy^#VMli_oY*
+zg7bETP-CokRR+^Qa;2AM7)7xVD{@Uj2biq>e$hM|d~Il9NHDNIK4(&x#NPZ&7n20H
+zzFzq+Czn;o=SqYZq@yll0HByA#*$wy6lcnsUA_-{tEpzDX6!w-<OOE=tLQ*pZc_XE
+zjkQvhpD`gJVOL^5;E~~|<ZxZ<YkD?08^m!dLqS0YGaw$f0_1qE#hAU9Q7$y)m_H*l
+zmRm05sp@#{ng-gW443())HexrNR>|I2ax}J@N#(3DaO>+Cs^A@u9cYm%t?Xrn}xLi
+zGkXGgW22+zyna-aF<d82cuXkEF%9|Z?YCcDySBb((tC4W-`am8^wq|k#~!I+(Vu>`
+zJoAnoGxXCVc|qe(fI`QK#<DFpTIgjp0}}{b_G${{>yG)W@a@YyR)}NTPA(HfHFtHE
+zIW4V0?Bw*CQI%&|kUtWDJt{+ZkQY?0^c<v%#@ftO`Q~}-)AP)L!{zP;Ki@!0(!wDH
+zB^zj5tXShtnug=JctLsEL`SCYRKlD1`Lu*O=Wi&JnJqMN!P;vH>JyUdyQuh<v08P-
+zjFj}Y`uY-R2si3SUJiU4McSLCI4BzFAdo?b>Af4D{OSMP9|aRI1Y5qYYTVn;e(4>!
+z37xRGxFlnVzveX1;g3S(luU(ioeK;EObRZCrUNY2fjnihnh-R(q7^NA^-pdX0H3mD
+z@mbl^!(=m6jEvKw?h2u04r2&?ZyrVNy)^2n!w#NbO<WT!<~$RMJCIm3UHu>D=p?a~
+zWw_4-d~8c`u(6L(QL-2B(*|*@S@8paj3rycF~0%{lakJ7WYE})x!DvdVD3`ZKp|Pw
+zW~=X3!%rd6$gD66wEpVt{=!lwfqIO7;TYsPIW9Cw{g1@71C+}rDzn;PimPQcIpL=r
+zc1i5=%UHg2#~PZ=r<`gzbv12YyA<EI^H*uS(-#-E!69jERCXSi`A*;fm}_d=&VP~B
+zke{Z{oLErHs5H)uppmH<JXNtTq*)PjbMGGzBq1r0%fPT36N4O-$kRkRs#ZYK8d7k4
+zteS&!=I>1bN-fsVPe^2zzgD~%Ddw7y?x)u;di9dA7Tli!;6+#4SBbUO)cH^V@Fkkl
+zDR?wO8%7si^|9C%jI!1AjR5xrSGxa)=G3`d44TY)oh_q_+C*|;3=H>v)YilhNv?NY
+zH>F@x1wv*V#q)NN+xwfF_op5K{vHf`(z%)>72^PMHZset%CA<j{y{p_wVeI#v!V1*
+zNqXTx{I}hXD@Sh^uAI9KdCS4i?*6<Tj5T5<r;6BPDzv4h=5DS_m;|$l+DFUOTUr4l
+z_i8@D#sX@AHl3zTITNq>`2HU})D1359_5dzU7lu?gVj;KgqTjg7`*Wbk&u+iWthIW
+zk&w<Uzkmh6_Z)XA5<nUNTsNSofgn47|7fKUt=Q4#$d?iX`oUoAOEQetoUh3`+uC@^
+zy$1zmf4--OGc&Q_i_*l>MB&O^h3Q$^;fsD^BUOQ*zho7)Z0FEU(#<t0&zKSTbl8;9
+z0yoTK&(G3g6Z`#mC^j2n3q)TK2#3D0JTo~U3Oh^}{^@LphiMY}`;q<{f{Fm<5v-WK
+zT=DqLDhd0!yOgiGD{e0N3N(>7K>_~o>56@yG$faI8u&*B$SN=vSII5VP)Bh3XK@XA
+z{*=zTGx`E^bIn06*%?v@@Zl||8t!m-T|@Mp7;b}lXytsViEV6|T`^1;h^-d~PjPwg
+zC?L?hBm*L~gQVGI@1b1!qDjj9+;-~F<Q%a8HNH?olhaF3A*>;7Roif6f|AMh4VcLo
+zM0FMV?>Lsw9(ECCWFq#oy?$7=Q|fc)QyDQ2VUt`tqGlngWNzPUaNYjEN1EC&iA1@j
+zuDJUCrHA+wa$h2EbyiTb0*27s7b<%N%V5K!cmvk}JXNq-p=te@)*t+E>n$Ri{X=Q-
+zY4yZKqmbw${!wd9IFwRqA<(YKK(n$barB5q5G$(Me2Es5U;>n$MPs$AkftL(b}#Xk
+zVgBOc{Ju*<l6yMq>by&eVzCK)*j-(m^kTjz{mBUDEN6x=@;rSn!vEnE1kpi&X0R(V
+z$k{S?z_EG{hGr`*l=a7k1f2(ng<Ro1ox<o0%CD!YaQQ%SZ0W~i6i^+?zUEkmz6^%m
+za`SnsA|>(|G)R&wVvv`o{sE_HQmAP<B5Y8nSRAM*PQ}6oKe7Y2?%2|oA|8er>iw^n
+z_jrpXrdqjm$<8FoiTZNsjo%lYfKW$C4p;Yg_a)XLq6c_}24&Su?1`N!x}uy>WAS3z
+zauE$siK$<ge0jWwO*<nMzxH7;@wfT;JO$Ur0QUHVGQT=?f+S$1a*PtYoBof}=JcYT
+z=X+Np51CBpk<njuQPbQNQm--~g;XFVSkAKE?9-V2dLx|Gm6?0dR6Ak&Hq+5K>({_U
+znqj#wx3iKRme%E?t0vQH;)6Z2rvf@u_*Zjj;_1F-LI<Rk!VupsZqDwnCkA6;ZU$qJ
+z+b}8ALRP%0{>8`N<;9khy72QQGqWIvhK&9jrgFFWrBAAXbBY{m1QlU#lxj2S&OI-v
+z?%VkRQM-UTGIh@(p5Lq@a>_IGe*A!PEfKLKwkHKF1zU=@-S?5SqXXKxAa#Mfqf(Rk
+zw5%YQ5n}-l<KBLT*v(ObUygPQy+onL$oHm!$J9&K-RpCaO5^nb$V^7L3FOo#|69d>
+zzNUGx^h!2uDItzRkP@F;aiM9q%WQt4iD!D^;^Nm0klG|FJ8S%ypsA{-9L;5r;pgp1
+zLO-B~h3n`=YeIP!mgc^=`W^~Iw{He{_skildnNLvBql4sd8`^xbSt*S%>-R`PJC#|
+z2M6ILoc0Pt%-m{G>nndWJ+ifq-kk5>WWKn+)wEbI`lD)4q2C-L92@xbS@&P>MRu&p
+zRbMD8dsXubSBz@y60^5-2NR>Ya9lh>xN&1s=0%g~t|NK&s&bX0H@Ix4xMTS|ZKO<K
+zJCvh;|9sM%4=p^dBtr$Ed9g21fco$Z5eqC`y7xfrA%j#M^KH+^b@?i*GMh4NrzULM
+zO?k3Fx@j3aRdd8utS<!h%d*fLE9nnKbDsLBQGv~!u+7pX<KlprtvDl1I&d%cJSa#a
+z^xEV0*V(;)zJ@L$IvTnG3>IN-L%^xn@lT4qwzyiI`IasUOGeeM(0qXE78tT6Vm{Bu
+zoz_X7FUFz)=&O9+)tAq|VcuQD)fP_GCYt-~R+=|Y8kAsxi&J(Ts=y?Gtc7VbbIA>1
+z3eFwnvFgvsL<!dizR{Y~RSLrgRCG;3Y*ckKNTp$2OWT7to2dCs?_HqW3@J2aW*e0)
+z0p-k+_~`i7o>vl>@BdSn2>*`ZbB3IuX9tEfD=N?7Y=GHvnw&gSO)Gbln%*0^IU9Us
+zmRvD1axpj<gi4}S<5B_VOv)_W*fRQ4`yM_0`lNHOnKdec<2aSw|9N-83Hf9_#nk|c
+ztI6|9FZECTf-&vFXtQgc|NBJJgBESyL6yCJq{RIl8Ol=g69Z#W5QjYQ<tu@R-=O?8
+z!Y@a?PHst<QTy3hT|7=-ou+`Fj6E@AjGopW1*a=6f&xy3<Tb^!83r&x-iTdLnmAEm
+zG&bye<?Dq`9!ZC!FahdTom1K=DV!c^)Ko<Lmo`qK^NhvH{-Y)ZjJp^A`63CURBk9t
+zOj2r+MEI*8xrU8`lByj;Pci0NQ@2}gJYY6LO8x6`K!uB$ae~Ry$4iRDDT&QYB0^>z
+z0ieSyUU6od8UVbQNK~4HL+YM<E7BxC>G))8t~`Js;z)cu!~|sDNRu{lYS+;;%b(I~
+z$@OY9{S2oKhl3#Gu#S{kTX31onOqEQ@xtNRgOC4Ox9m@P_9;gxO?$Qn`={4|8%r5o
+z*Ib53;s^*qGe?5T%$VI?P0`+sDwTeVsn5rz%=37>OUC`U8(LHnvj7ZWdq4Fnq%XPj
+z)f5sHm%r`ZY@VS2_4ai0{@VW$l{iSKS3vBN&r9tt*YmL6<m)oO%`eq=<vPYFbXfoO
+zZizc8^tG1J+lbr2s6-UGpb)hBWkR2^rEN<}n+^syhChRnGFP@`G*xrW$|<|Ps9uUD
+z9>bl}ly&8JO<~Z?f|XZQR4kVvHnp#}t0N)5n6!){%Bli*!5y_h#?%u5)5M#Glg;dp
+z{7OZ3iS5pTY<#jtyFz&y6&K*4CzMOUqzd+s8LU(<fsxO2n_b4|6i;ML@WY~pY*fKV
+zzAeV4;8)IO7acPlGq?KkFRnXL0n)IDI+a+?y^Tn4B6s&<>}`+iC8H)Pkc?d1^J!K<
+zG|awFO$OIkc2u^4<cXS=iUSV}Ju`W(n}~6GY|E}Gmy9eT0GL*!>3E6y(TQVAVFDSe
+z8+v|Nqk5)`hA9JypJ^ymB)zFi!*aGtHktIXpJBK>b@0d47RbFFDbE9hRe>GP;^k)z
+z;87@+L})?kt?G!F5t@*IklTg)-Kb2PkW}+gCr$tu-yfZ`zgWDVa+M*wTYnAsMzVKf
+znXd^}cbmhhb>K1S8`5r@C$T8EGdoTOmw^wWapV_F$93jy^SYGA=wl?~-vybYB%)sq
+zvL}}I?IjEG4LPQa8p(_d()Wj(StCf^<ULdr*%XpS<p^gP{#JH^89KNccVip;d6udq
+zX$Q0|ohg}iQl880So4dlE;rLVt-k1J=+-i^Lw(1-VXW-ghnQaz7TO~hQ~<uZ84(#q
+zcp8@kGBRfkA>I?(iAhcXC&B`85?GQ*^>a?v8KR#h5vu%xI%|mZXy#xkia_(RrMpf4
+zS^V5v=O3mLvitr^tCe4Ian6RDLJYpojl4$2NpuQLA%pU#Nh&TJr3y4F91#=*v6EbZ
+z$|3?2s_LJ7afm4190G^NPH5q1)v&2U+q{Bqv=?V@w?fKNA6FBe(oxD^+qT+Krb4b*
+z-poB;fpjioDD3)IR!r!_`Dr~Ww7|rt9W~P6G{bxjKR#LX8w|h7a1ni@!2jONZI~5p
+z<|Dfij=DacMHm`dR9^!o1uGhP9}^lsw6&Q0c#VmGH%d3u20k#Fpse>!&tg)_$#rm@
+zXttUPiTkLLP<1X1h_vr|#sZuhUy{MJd-obsGdB$?FfE{&|3$&du3Gqw@SfM4nis*F
+z{$RNqRs0c>xazqs2XvriHVCy9r%`jx+r_;mv-72{+ch0``YM#u!M7y^u%e0!nH@V+
+zE;Ku>g?&5hn$$&f?O#qX2isO+g#L$GghGLpp+fb%9=NHigWkd2)zjN348F-SX9&6R
+zc-$~sAEMxwwY1BhHn9z<NygLHRsDsYbKMo5Y_s0B^uGJ+0st^bW6^|3E(fI8!W-Jj
+z4U6kzCG_ckRf^4G@C)6}<0a6w1Iue0?U=FdIL3Kv1+3nekLEMGWH^+!bi5ZG4(S70
+zP+3}{@v-~>K|o}UwDG&9_bAOw|0*qOaD1`OsQ&|D%Yf{YihmUm6{Jo?9VwyijeyhI
+z=+ze1+P*#S*lnq7)+FIPZ7p`xKt^Rh;4AR6=^}Nrd65|)h~CZJPu&;(|B1dFm#M#S
+zVDIB9GIn87(`;>z%9eY`?ZJBwsXY7qxF}pF6Rj>4Iq=uw0@cdp?vM9}44e_E*=+wh
+z>BGjNQsERX<m3XIdLJ=Jjp1RyEhN6m$ENU)i*u=`+VC(!3+hL1y`%*zontPi-eT=T
+zTx@nQZ32=Xpa7i2Qvpq4!kvsSns#ib5=PLoX>rxe+G=eD`-B!J@5Tw46y8P0`iq5b
+zu|L>pMOHce@Ex0IGMjJ8oZ$zgLRkCY5JlXvJbX-T2pDp1;-$Uz&LgY<1C{J?*I_&^
+z`C4zn@~2UW4;c8ssDaw{n>%Ie{;I&RFF#fZcb76vRxi~7{LTEnS2UDUROeeMt>`W*
+zUvkk>_!C!`<ul>ry5tDBj@1+U(10GJHHPVMB+4gsWE7VY<BPNsX80q&MCfJDXOYjp
+zP!mqtk_9BjS^P}SPfALpfgaaH<&~%Hb?w-Wsqr|2^C_vQoViVEEBATGukwmmOJ)gQ
+z;}Gz7<;NoS^zG|!Q`8Iu0Z^Mv0BE;39f96+tB?X>X(V{sddq0mt%wssiUJ@57uF1F
+zM;t*m4V3DkZnnQUI2c2+M}mT)<O@^+JMBoNAtz^nQP?nAopgIZMWlsW-Vy`H;ZdSc
+zj`U3W{>s8W--*???aBXrmVm4UI#mQ8YbqE*UN4y?aTn9wA|aSVo@%SlY2d|ERvYd8
+zt)28)pD^{OaD>gb2|`TZU(6z&_#NRU8CUco!&$isY>X;8@26l%zHo{P2uj;v+>J4v
+z*8$>YK%yXUUfA0U#Ds|%yY_~i=pCD448vy6i@(J(N7S#12>{8L+Raubs-K;C08vq~
+zY2r9@yR-i=C9Ao)P2FgQp4d=wxBCcdTrZO}{+NU!d~I+a6-lo*HwU-(vqmmrE`suH
+zsZ^mh*xcCuNxpMiQK1BB3Q23Pj8yNNC!E!PNPVa{{)ubzd=^)!d}o+(YbQ=t_e#&7
+zZA%D(5K{-rh18{e+G*nH;_0aEGV?cfXz#<HC3Ffy;4R9iLSwP{gh?wW@E3=@v!JWj
+zt^_pIwL1FhYG~eKFZ)30(7k<ACr>TbzleazI9|;iAkPP$@WBq)(1dg*#_Sy&SZh(U
+z+1BrPpXpCN{3S)V`iP7n2;F>%11E$EwS=r)Kg!1@!DFa!d4KBvZszHF^L}&l@|rKO
+z)zHdH(BV_?b8eB^XIh|me+|;Pl&J>86Q|clUDLC<UmMX%67aClTvSU5ZQ*bjZb}2F
+zC}ZY7;WB3b9<D)x4AQvBMsn!_Nj^?4&F^`^c7Iiw=I;YB`|wryznSP+K3eh7(@sKL
+zjgm!<#8>6HG#&!B4GSyRla=xY*fgFmk=wOX(#*o+a)a?Fay9bh$@F<)<nFFkrFQM?
+zAFqf#*B#)U8&6esz|Mf?uLN4c*|5-tDOW~N4|dES7m4@0+nMH;Y|pQiQ2g@K;!f$E
+z=qEn5Yz^f8<|Qfvn&3q_>VL2qAThP)Ev|{=l4wlzGl(##N!GtTS@yx~w%}~l(R5`x
+z#`f|~G#HdxBevFtO<hD}<7bnT4Pp+t0D;I1jf%_D37<zrhS2P9$&MizH<Ms~GH7F6
+zhs4+~3hB_vb2b_Fujfupm06}?0cz;Xx>iIuUg}>yWgCoWFT@%;MXvY#u1a>_FU1Q>
+zea6issBh&}(oBvkQHCe{3!(z2APXebpKq!=99Nsazy11Hkyd_y=BT$)T}E7Fr|n7z
+zp6tiWhHq#~uSNyeY>uxaJ;&|~FTnnfTE=EAA$CWQC{B60xtV4DEt#ZZ1Qin{@Yuf8
+zn#4Oz_;`)4{}u^<ljc$|+ah?&7{U4PJ#(m-^-0Qh;?!bESm7~-MUw&wV&f(&_U}^|
+zo`i$1Pxd#dVb_YgI1ma7S%Py#-sxXAB(bDnIw`yz@pW7c3MRFDeRc{8<xs25D2Ksb
+z=Zm7Xl}PY}V^YkK$KrEB1t&A%WsHCU+bM-1xrjKpB8Z=$v9CG8+xXnem=`51h+|yG
+z3`8g~TM=*Bu8M`JJ>_VdlM)sN_~qds-^pD4eyQu%5R?4CI3fMyh+5Sg*(f%M_xU{{
+zW&~;Nye}14hGWNRX7aX$QeWX;`az&i1QBU5jdYRsUy<>U;Db|AcSMkSV{yaNkY{4i
+zM+(YtR8Bh~ggWn2z9sK(_U;V!&J6b21Z2Q~_JD~2BpW%JOxa?<4_m72C?*%I@$zDJ
+zR+n*`<)EaOtUctWnlWuLuhM1_%Dx1?K!e(-`jv-l2!Kih6i4B0#h0izk#=GGHh<v)
+z>6MLS$!anECmr&G_bfSF@kxy6W-wT6cn)*PMTTpVTQxIoEp1*;D-!2E;NArD=&yvu
+zMn#_mz?}F1|0HEEs0>v}K}ohI=IcJ<W$B|s!`NT?hdxv4e}YtN^huodzMz}?ZSMM@
+zf%&IH<2hh@ZuyDy_?6#1`q4U^EW<(@D|T|Q&lV-*Ufhq8Fz#%c2R$lkF#01l2`xIl
+zH}@678h>RMOiQp-fu*fL4M$_PN=K4E(Xiv&f0&VczVbzHEKuJ&k9}T8hgE8a$*P9k
+zkftK{(F}seZdX&6e0bg^k()V!ybQ|LbT%$hOAs1(oq+GFT&I-rsk(yJ&5$JsN;XZO
+z7cnXV1B!St6rN&REc-Nt7vM&stqyY9Z5(hiqX$Y&N=!BTd1<1U=rr;udLcTUl){KR
+zey>K39;0$!Z*hD};lY-*Y3kph+0Q_<`B^8lA_h!Zfd|XoOu%zO85**l{(;mz!2+20
+z#l7sVGJ<jYI~N=ae+D?gHff*7n(BB}>5ksmghLJc!-SDa|E!W#5M%M`@z6zI<`dnI
+zJCTmoMjS(r*`hj$KFZ@u*1ti*=;?g&xM>#Y2ae(eyD=9i%3koTVuXcPQPB49q_cb!
+zVfQG8iP@m0=DHKaKu9!f-P+7;E>^|`Qxp>>$pKK}d3?=gS3{Tg5+Uax$<%WD9YY!e
+z8$+yE@J%lz!S6@DmzyeK8L)iK3sf0O14W&imCFOWdfDd9o~bGkr4wExJFhS?ndap^
+z^b*(kEef*(R;VpNVR)0WAG((aa7iQiXvVea-)E=Ceizb4_=}(U6yJ312}ayNZw8Q&
+z<Ir6ASGDt$3kI5nJ~{NoQMEXyQq1P;1Idec->VHLN(!_Vuq`JCrNT&S&oNc-arYd}
+z;2kR|Jq3XUbWC#9TfCs_aI>Qprmss5eq}#ZMrsTm<^BHjsraWfP~!7@%$(>Dn%p-z
+zKk*E_CW`1J_7T;_$)=9_=htrp63oa$UMN$;3kV|7j$~%7IL&7O)z`dfI$J_z89L%q
+zDBb5qB5!YBXe`6#{F)+aotumJ;iXe4iEhcA>|ckwPMCK4<DZ_N!<6)2L%1!b#q{u*
+zWq{AwBRJZ{A7Y~+Dy(U7Gf>b7*jo+(A&+BXxxh!?c^@K8xp)Yr$rwaq+OR8MLSldT
+zAyVzWn6?riJW_q?uAL2+R5gdZ+;qp?%!ut%(&xgGpox8@{$IV}=5mvN&t+-UAywaC
+zoEkVDM#byAT>mZ<!-cMInvuceMku=L#PB;uFb)|?!#C`88QOg#K->7{?<Bp7U}uQq
+z+|?z6Dfo$o5ZfdA+sE68&wG!$qUX8gNYr%`l+XC>0*254t3%~>e~ryz{L$kiA{<QZ
+zbZeLLZEAO2TaG;Vh9&pC=bsPlJ*^un6SMo(s6r`e0}W*DJ)YH1^1kVBAB*@?Q%ZB(
+zuszTTw9k!#_Fl++p7+qleoaCe?G=?E#-fkz{L8fK&E9fokLcY|J(fNZSgO+Sg>QSo
+zfXQ&2O5(uSKC5t>S_%l|XaQo=usIzq83o|P`J@7M-zvA}!T@K{MC;-3J@fW6r0wTB
+zkeI9?>&0uiC6z?Q$ijr1+c_>TYn_JFUWNYCYZFmEFQS<aFQqlQ&A#M_e!zz>_UPyN
+z=K4Zx=n12seH4L534{e26)`dUn-T?kLU@{ln%7No$9BwX5vLMyX246fY7UX@<U99Z
+zp%*xdEG51tpU$G|(qCU$Ny)#}p-6!j40sbG*h+REq89xK7_bM9UvJP^(J5Je(4p9h
+zA#Ib$j)`07D01y;iv{>?N_Q6IjB(ztTg5t+9MMHg6rGycV#3>d6{lRaw%&f9MkG|F
+zcAO7`uq!|6c<mCh2vNZNOzzX6GJ29cAxW=<0L=UbeDnlHtMS->-+Q{5+caDQBfrA?
+zYbUqLrK`ySMa!{0he9|%QANm~QKM4_pF_QjU!k(yy_-vq5V1T4hM8?gaZMD}1g0tL
+zGb@iJZ>u+(iue`K(sxRI6Mm?X)W)uh&J{iIX8{`qtQ$r53Rmn8^I^w%M>ycQba^6n
+zU2t^*vijznq_582#qlbsTLQy6L!U7**TZB1vgYiVv&J2DFwL4R$irW%qED{GlV*_v
+zv@Oc84jg2xLOBYZHuU*qKuoNH`coaMX3V`V)&lQ#(4?(n!sugH#_Ban@yY3%!HFzC
+zn`_Wn#)AL@E*94Fi%N;n5oh#r+_<4K)`A$)QrH;&oVVls!g`4GQb)w@e}2nQ9&_O%
+zHC173x5=(qj~{)<I(GOs2D>4<70k8&<2=5GT;1(=rTuz4W*q}>Yd*&3PwdORdd}|Y
+z*ITp0eBum~f7q^S|2PC<4pu6%w^B!bR!YceCu?6mxhrZ(6`lV2$9H|wq?11a&jDji
+z2RsXH^B-P*r8^VFmq11Vrz~gTMRx2szC1hpVc2`4T(Wcv#ueoUhE1GMxzlD4euXuW
+zg@0vl@7Or&QJu6<EO3!}4v?lrF-JLn{Euw`(wf?r>ljaL2zYdy<#*MjRaDCUc)IB8
+z)S9m(4z{r<|9#A0e*2ORLu`Hy1oUTu{(CV577Bc%UZfAf>x#1W`BTVq{P~aLw~hep
+zzB}uf>l4!`nmJBfR%_3_h(Oxa3-uR{-2!CSIKyXmt{0EyPcom!vU^hE+2u7m<%$&2
+zh7$WhN5P)}GbmV|JhU}o&7?kDIQfluh{bf%r9B*3$#H!n(s9z%)ks|~97;mY7fJi6
+zN&dQWi_JSSrv|IX@PhoG$q~WeHS40{98nM+YGULmIbl)J6<~F5@n|*+aZLd{0@%o!
+z!yY{zRC_&}5T%b`dKq$)jks?TR%Skkv0(&?uO-Jy5SC=~9C&LmRZ4#z>pHJb@Yg@a
+zNJj=OH-~G%YA@nv&w%$-43-KCn3lTOAVNK>4L9os?TfIOd~ac*jz|2wcMSw_)dVKJ
+zu^a3dB_ce^{!X#*Xk0i=^s7ePu;QC0GYuqC7m*GPLY{2?(3?FnrNV2FrV*@UPMpwN
+zQ8INm7$j0jtkJAQT%n1)zYAAaP%p%eBI#ShV6_4&S!E<*WdPy<T2y>sPfRSbwe6}m
+zaf4sl#<O^>^*LW_u5I8H#Gon%n3hjPD6(Xej}qc}9;YF!FVRLRO`Mn73gzByD?ZDJ
+z#j}w2nfGw){=2RCeMvo2(J1MF+E<8A??Al~O;KIjFA1NPtg$I98jj}Hde_~hRH=%~
+zuIlx(n1!!qHF`AS+9Ni}EHH_Ad{%v+Jm`f<$BVj|GmaU*NsGWzzo78t%=r*zn#8ez
+ze}|O3{0VKmLQNU0W?v~^)mPl0_`I$-p0a^A_)dli|G<2%V1D*-q*&niJIOm|rjH>}
+zd5n?Zp!S^)rlQ+4Y%FI2+N@Z%0tQ<A?~CCA0BaFTEddSEa9jx+TpN6knQ~G89GX!1
+zkvGqHMlq#7k#!by=gVGk4^{uw)3ctnz;GW%rG@C!{#~#Cf{>^h>=fIpDS?U%!249g
+zyTsjnZNhNj^FZcAT)^U|I=}){P4o-=&h9m&+BV>A>Q0YO`I9vhIa?1jV^ZbSSL+kP
+zKJ%X~WnRy{N>Wi46ScP2yCBpz_kLjnqFIoSjteur_j^{l`>yfr9=hSoTGgwC)pG2Q
+zq`xh8<TCn+$>mPJia5~M$qc>OXu^%16d<cwLS!ND9rM3|r@&KO`->x8I-wU-ZO2%|
+zW_OW4sGTZ593doQ%xpY3iPWP0=%NdXfeD%w#_L(FvFy`#x|t%ymC0oUG=|eXbs(w(
+zOx9oKRI=Y{Gf89dFAe9mg-S-xU;zaMAMdY(;Op8~?5;1Xk463a=uu)fvEAL5lh;gk
+zmhKS<9o2MbIuy*33IPo~O{qX6HRyIVM1WR;)I+0vvL!XEn84q=h0Y>b{)rrUrQhrr
+z2Hny;Y>bSX|E9&s9-OWDaL%#F;1X#0JY9{UZI-^9@VGPbh0AfjTkj;G$d1YhUrc1_
+zAdZPKMvFuk$nuKCyH%`sFyrI$+mgK9ISxFqmHb<mVTUhr#m;F*Zkf%l4jfQ$8k1>W
+z>dM{Qw?t@oi^olZ)zfxsX_pE0EpL<c-8n7P?-rpl>kH(cQ=i5a|MgGkOBXw_c;%3!
+zD!#*wOy_NGLa>9ftMO!ZczhQCdbwz^p6F~U=wT6m#Bxd-=-<~D&HZ@4T}6C0r{o!E
+zw0$QGem+QX`V~cyVo3{+*V9|ds&OlZwjjL&5HS`q)|XcL*4R~KFsWct(uCzJo7CJn
+zn;NGZGFHtWn5q0U*md3L2inB*r)$hI4iWt6F~d0R_GozRu<E=IDpe#EtCA`UUEk>>
+zTMf`6RwyNC;+XaH`rS68v%@<LdK*9derh>B>TDKyYiWJ}{G5N>iE#K6H-JwL#K!Zq
+zvP+ALTb#9E*~`#y6jw*0;wU&zQ3I$6h1`W$+J({4#8Y9ZHkf49Gj9F^$xx;0nJxA!
+zCck+v=%?t)5@r<Ff*nkkEeix>VCKq{QwFPv{t3rQgCY(Wo8K%ty+1WD`j!Z7eBId@
+zN^{VyQ4@UGT<R<Oq!1H(P|@_KVl5|p0aYcimxrgTY-NC0AZEnu%QX>evoDs#Bv{iX
+z<GgGFJsZ$Mi*Bc?@kUom31+_(ewaMt#s>6ZShb$g37kwFSSq^xy*gsBBCm>it>Q~C
+zQ>7T}i8OV;a{NRWM-O8^kQt)vlFy>$ZyX?c`tzNrJN0SU#cfOY?aOfr&PiJx0Xu5}
+z*6p3RZ+zrA3U&}()rt%aRCgRoCPh8u8q7U+o33<*9=+`9kGT~fmHt3sBx?R4+t@X*
+zYwwGTU70_goS<Mte|mUy>@%(RsSZ0B)V52LoI4uZl=NCUR4gz1;2#$g2aBzpOlm1P
+zUmfwU$XEihm0aE&zP~iSTy}e)V8q^ha`{jAQ3!fT2C#&<-Fotd#ik%15My)3ZG#hv
+zbBQuClm@jN-b2&cQQw7U7<0pLyQ;>zRYDX=K4A}DPrG^IA0*lplDO@lmo&$2dwXBJ
+zYN|OIT<&nZr2EAvF{#ge^w)K7g>d6G*Kd^LZLoOIc12-|=b(0fzlb#$*9J5o(FhgD
+z1Lf(6SM2AO>zZT@Wc&OP_nG%9X*-kG$`vJ+OE59xws)wS`@E(!rn*(8NAxw8$SS3h
+z%KrVArs5%0D-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%0DE@$Tl8B<DHF
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/public/manifest.webmanifest b/public/manifest.webmanifest
+new file mode 100644
+index 0000000..ec2f8f7
+--- /dev/null
++++ b/public/manifest.webmanifest
+@@ -0,0 +1,15 @@
++{
++  "name": "ShiftMate System",
++  "short_name": "ShiftMate",
++  "description": "Employee shift scheduling system",
++  "start_url": "/",
++  "scope": "/",
++  "display": "standalone",
++  "background_color": "#10172d",
++  "theme_color": "#10172d",
++  "icons": [
++    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
++    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
++    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
++  ]
++}
+diff --git a/public/shiftmate-ui-assets/app.js b/public/shiftmate-ui-assets/app.js
+index e4ea42a..2e236f7 100644
+--- a/public/shiftmate-ui-assets/app.js
++++ b/public/shiftmate-ui-assets/app.js
+@@ -500,7 +500,7 @@ function showAuth(register = false) {
+ 
+ function photoUrl(path) {
+     if (!path) return "";
+-    if (/^https?:\/\//i.test(path)) return path;
++    if (/^(https?:\/\/|data:image\/)/i.test(path)) return path;
+     return `/storage/${String(path).replace(/^\/+/, "")}`;
+ }
+ 
+diff --git a/public/shiftmate-ui-assets/modern-2026.css b/public/shiftmate-ui-assets/modern-2026.css
+index cf86b2a..aac5a61 100644
+--- a/public/shiftmate-ui-assets/modern-2026.css
++++ b/public/shiftmate-ui-assets/modern-2026.css
+@@ -2881,3 +2881,56 @@ img.person-avatar {
+     object-fit: cover;
+     background: transparent;
+ }
++
++/* =====================================================================
++   MOBILE SAFETY NET - stops layouts from spilling sideways on phones
++   ===================================================================== */
++html, body { max-width: 100%; overflow-x: hidden; }
++img, svg, video { max-width: 100%; }
++
++.main-area, .page-wrap, .panel, .dashboard-grid > *, .right-column > * { min-width: 0; }
++
++@media (max-width: 760px) {
++  .page-wrap { padding: 16px 14px; }
++  .topbar { padding-left: 14px; padding-right: 14px; gap: 10px; }
++  .stats-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
++  .dashboard-grid, .right-column, .employee-dashboard-lower { grid-template-columns: 1fr; }
++  .table-scroll, .schedule-calendar-scroll, .panel { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
++  .modal, .logout-modal, .profile-modal { width: calc(100vw - 24px); max-width: 100%; }
++}
++
++@media (max-width: 420px) {
++  .stats-grid { grid-template-columns: 1fr; }
++  .page-heading h1 { font-size: 22px; }
++}
++
++/* =====================================================================
++   MOBILE - main page (landing, login and signup)
++   ===================================================================== */
++@media (max-width: 760px) {
++  .landing-page { background-position: center top; }
++  .landing-hero {
++    grid-template-columns: minmax(0, 1fr);
++    padding: 20px 16px 32px;
++    gap: 24px;
++  }
++  /* The buttons were pushed down with a desktop-sized margin and a fixed
++     10px height, which made them overlap the preview. */
++  .portal-choice-group {
++    grid-template-columns: 1fr;
++    margin-top: 45vh;
++    height: auto;
++    max-width: 100%;
++    border-radius: 0;
++  }
++  .portal-entry { padding: 12px; }
++  .landing-title { font-size: clamp(34px, 11vw, 48px); margin: 20px 0 12px; }
++  /* Decorative preview only - hidden so it cannot spill over the buttons. */
++  .landing-visual { display: none; }
++
++  .auth-shell { padding: 14px; align-items: flex-start; }
++  .auth-panel { width: 100%; margin: 0 auto; padding: 24px 18px; border-radius: 22px; }
++  .auth-top, .auth-form { min-width: 0; }
++  .auth-form input, .auth-form select, .auth-form .btn { width: 100%; max-width: 100%; }
++  .modal-fields { grid-template-columns: 1fr; }
++}
+diff --git a/public/sw.js b/public/sw.js
+new file mode 100644
+index 0000000..2173308
+--- /dev/null
++++ b/public/sw.js
+@@ -0,0 +1,5 @@
++// Minimal service worker: makes ShiftMate installable. It never caches
++// pages or API data, so schedules are always fresh.
++self.addEventListener('install', () => self.skipWaiting());
++self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
++self.addEventListener('fetch', () => {});
+diff --git a/resources/views/shiftmate-ui.blade.php b/resources/views/shiftmate-ui.blade.php
+index 9ca15b9..b557f4e 100644
+--- a/resources/views/shiftmate-ui.blade.php
++++ b/resources/views/shiftmate-ui.blade.php
+@@ -7,11 +7,16 @@
+     <title>ShiftMate System</title>
+     <meta name="description" content="SHIFTMATE helps administrators assign employee shifts and lets employees view schedules and submit schedule-related requests.">
+     <meta name="theme-color" content="#10172d">
++    <link rel="manifest" href="/manifest.webmanifest">
++    <link rel="apple-touch-icon" href="/icon-192.png">
++    <meta name="mobile-web-app-capable" content="yes">
++    <meta name="apple-mobile-web-app-capable" content="yes">
++    <meta name="apple-mobile-web-app-title" content="ShiftMate">
+     <meta name="color-scheme" content="light dark">
+     <link rel="preconnect" href="https://fonts.googleapis.com">
+     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Geist:wght@400..700&display=swap" rel="stylesheet">
+-    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-2' }}">
++    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-4' }}">
+ </head>
+ 
+ <body>
+@@ -825,6 +830,11 @@ class="btn primary"
+             })();
+         </script>
+         <script src="{{ asset('shiftmate-ui-assets/app.js') . '?v=20261122-2' }}"></script>
++    <script>
++        if ('serviceWorker' in navigator) {
++            window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js'); });
++        }
++    </script>
+ </body>
+ 
+ </html>
+\ No newline at end of file

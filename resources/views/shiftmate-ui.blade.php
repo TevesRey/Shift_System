@@ -7,11 +7,16 @@
     <title>ShiftMate System</title>
     <meta name="description" content="SHIFTMATE helps administrators assign employee shifts and lets employees view schedules and submit schedule-related requests.">
     <meta name="theme-color" content="#10172d">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="apple-touch-icon" href="/icon-192.png">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ShiftMate">
     <meta name="color-scheme" content="light dark">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..700&family=Geist:wght@400..700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-2' }}">
+    <link rel="stylesheet" href="{{ asset('shiftmate-ui-assets/modern-2026.css') . '?v=20261122-4' }}">
 </head>
 
 <body>
@@ -825,6 +830,11 @@
             })();
         </script>
         <script src="{{ asset('shiftmate-ui-assets/app.js') . '?v=20261122-2' }}"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () { navigator.serviceWorker.register('/sw.js'); });
+        }
+    </script>
 </body>
 
 </html>

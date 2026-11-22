@@ -500,7 +500,7 @@ function showAuth(register = false) {
 
 function photoUrl(path) {
     if (!path) return "";
-    if (/^https?:\/\//i.test(path)) return path;
+    if (/^(https?:\/\/|data:image\/)/i.test(path)) return path;
     return `/storage/${String(path).replace(/^\/+/, "")}`;
 }
 

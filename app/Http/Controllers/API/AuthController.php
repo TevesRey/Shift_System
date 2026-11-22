@@ -459,44 +459,47 @@ class AuthController extends Controller
         ]);
     }
 
-    /** Store the signed-in user's profile picture. */
+    /** Store the signed-in user's profile picture inside the database. */
     public function uploadProfilePhoto(Request $request)
     {
         $request->validate([
-            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
         ]);
 
         $user = $request->user();
 
-        // Local development uses Laravel's public disk. Production can set
-        // FILESYSTEM_DISK=s3 so profile photos survive stateless Vercel instances.
-        $disk = config('filesystems.default') === 's3' ? 's3' : 'public';
-
         try {
-            $path = $request->file('photo')->storePublicly('profile-photos', $disk);
-            if (! $path) {
-                return response()->json(['message' => 'The profile photo could not be saved. Please try again.'], 500);
+            $source = @imagecreatefromstring(file_get_contents($request->file('photo')->getRealPath()));
+            if (! $source) {
+                return response()->json(['message' => 'The image could not be read.'], 422);
             }
 
-            $photoUrl = Storage::disk($disk)->url($path);
+            // Crop to a centered square, then shrink to 256x256.
+            $w = imagesx($source);
+            $h = imagesy($source);
+            $side = min($w, $h);
+            $x = (int) (($w - $side) / 2);
+            $y = (int) (($h - $side) / 2);
 
-            // Delete older relative paths when possible. Absolute URLs may point
-            // to a remote object store and are intentionally not guessed/rewritten.
-            $oldPath = (string) $user->profile_photo_path;
-            if ($oldPath !== '' && ! preg_match('/^https?:\/\//i', $oldPath)) {
-                Storage::disk($disk)->delete($oldPath);
-            }
+            $canvas = imagecreatetruecolor(256, 256);
+            imagefill($canvas, 0, 0, imagecolorallocate($canvas, 255, 255, 255));
+            imagecopyresampled($canvas, $source, 0, 0, $x, $y, 256, 256, $side, $side);
 
-            $user->forceFill(['profile_photo_path' => $photoUrl])->save();
+            ob_start();
+            imagejpeg($canvas, null, 82);
+            $jpeg = ob_get_clean();
+
+            $user->forceFill([
+                'profile_photo_path' => 'data:image/jpeg;base64,' . base64_encode($jpeg),
+            ])->save();
         } catch (\Throwable $exception) {
             Log::error('ShiftMate profile photo upload failed.', [
                 'user_id' => $user->id,
-                'disk' => $disk,
                 'exception' => $exception->getMessage(),
             ]);
 
             return response()->json([
-                'message' => 'Profile photo storage is unavailable. Check the configured filesystem storage and try again.',
+                'message' => 'The profile photo could not be saved. Please try again.',
             ], 500);
         }
 
