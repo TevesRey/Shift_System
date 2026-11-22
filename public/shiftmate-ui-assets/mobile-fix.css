@@ -100,3 +100,4 @@
   .landing-hero { padding-left: 14px; padding-right: 14px; }
   .schedule-preview { padding: 14px; }
 }@media (max-width: 900px) { .landing-visual { display: none; } .landing-hero { justify-content: center; } .landing-mobile-intro img { width: 56px; height: 56px; } }
+@media (max-width: 900px) { .landing-page { min-height: 100vh; min-height: 100dvh; } .landing-hero { flex: 1; } html, body { min-height: 100%; } }
