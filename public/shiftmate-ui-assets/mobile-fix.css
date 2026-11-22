@@ -99,4 +99,4 @@
 @media (max-width: 380px) {
   .landing-hero { padding-left: 14px; padding-right: 14px; }
   .schedule-preview { padding: 14px; }
-}
+}@media (max-width: 900px) { .landing-visual { display: none; } .landing-hero { justify-content: center; } .landing-mobile-intro img { width: 56px; height: 56px; } }
